@@ -2,6 +2,20 @@ import Head from 'next/head';
 import { useEffect, useState, useCallback } from 'react';
 
 const STATUS_LABEL = { pending: 'Ожидает', processing: 'В обработке', done: 'Выдано' };
+const SOURCE_LABEL = {
+  case: 'Бесплатный кейс',
+  market: 'Маркет',
+  wheel: 'Колесо удачи',
+  'premium-bogach': 'Богач',
+  'premium-durov': 'Павел Дуров',
+};
+const PROMO_TYPE_LABEL = {
+  stars: 'Звёзды',
+  freeCase: 'Бесплатный кейс',
+  freeWheel: 'Вращение колеса',
+  freeBogach: 'Богач (бесплатно)',
+  freeDurov: 'Павел Дуров (бесплатно)',
+};
 const PASS_KEY = 'tonnel_admin_pass';
 
 function fmtDate(ts) {
@@ -18,6 +32,14 @@ export default function Admin() {
   const [grantAmount, setGrantAmount] = useState(100);
   const [granting, setGranting] = useState(false);
   const [grantResult, setGrantResult] = useState('');
+
+  const [promos, setPromos] = useState([]);
+  const [promoCode, setPromoCode] = useState('');
+  const [promoType, setPromoType] = useState('stars');
+  const [promoAmount, setPromoAmount] = useState(100);
+  const [promoMaxUses, setPromoMaxUses] = useState('');
+  const [creatingPromo, setCreatingPromo] = useState(false);
+  const [promoCreateMsg, setPromoCreateMsg] = useState('');
 
   useEffect(() => {
     const saved = window.localStorage.getItem(PASS_KEY);
@@ -48,8 +70,18 @@ export default function Admin() {
       .finally(() => setLoading(false));
   }, []);
 
+  const loadPromos = useCallback((pass) => {
+    fetch('/api/admin/promo/list', { headers: { 'x-admin-password': pass } })
+      .then((r) => r.json())
+      .then((data) => setPromos(data.promos || []))
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
-    if (authed && password) load(password);
+    if (authed && password) {
+      load(password);
+      loadPromos(password);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed]);
 
@@ -72,6 +104,35 @@ export default function Admin() {
       setGrantResult('Ошибка сети');
     } finally {
       setGranting(false);
+    }
+  }
+
+  async function handleCreatePromo() {
+    setCreatingPromo(true);
+    setPromoCreateMsg('');
+    try {
+      const res = await fetch('/api/admin/promo/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': password },
+        body: JSON.stringify({
+          code: promoCode,
+          type: promoType,
+          amount: promoType === 'stars' ? Number(promoAmount) : undefined,
+          maxUses: promoMaxUses ? Number(promoMaxUses) : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPromoCreateMsg(data.error === 'code_exists' ? 'Такой код уже существует' : 'Не удалось создать промокод');
+        return;
+      }
+      setPromoCreateMsg(`Промокод ${data.promo.code} создан`);
+      setPromoCode('');
+      loadPromos(password);
+    } catch {
+      setPromoCreateMsg('Ошибка сети');
+    } finally {
+      setCreatingPromo(false);
     }
   }
 
@@ -123,11 +184,7 @@ export default function Admin() {
       <div className="inner">
         <div className="admin-header">
           <h1>Заявки ({requests.length})</h1>
-          <button
-            className="admin-filter-btn"
-            onClick={() => load(password)}
-            type="button"
-          >
+          <button className="admin-filter-btn" onClick={() => load(password)} type="button">
             Обновить
           </button>
         </div>
@@ -148,18 +205,81 @@ export default function Admin() {
             className="admin-select"
             style={{ width: 90 }}
           />
-          <button
-            className="admin-filter-btn active"
-            onClick={handleGrant}
-            disabled={granting}
-            type="button"
-          >
+          <button className="admin-filter-btn active" onClick={handleGrant} disabled={granting} type="button">
             {granting ? 'Начисляем…' : 'Начислить'}
           </button>
-          {grantResult && (
-            <span className="meta" style={{ width: '100%' }}>{grantResult}</span>
-          )}
+          {grantResult && <span className="meta" style={{ width: '100%' }}>{grantResult}</span>}
         </div>
+
+        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 15, margin: '24px 0 10px' }}>
+          Промокоды
+        </h2>
+
+        <div className="admin-row" style={{ flexWrap: 'wrap', gap: 10 }}>
+          <input
+            placeholder="КОД"
+            value={promoCode}
+            onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+            className="admin-select"
+            style={{ width: 140, textTransform: 'uppercase' }}
+          />
+          <select
+            className="admin-select"
+            value={promoType}
+            onChange={(e) => setPromoType(e.target.value)}
+          >
+            {Object.entries(PROMO_TYPE_LABEL).map(([val, label]) => (
+              <option key={val} value={val}>
+                {label}
+              </option>
+            ))}
+          </select>
+          {promoType === 'stars' && (
+            <input
+              type="number"
+              min={1}
+              value={promoAmount}
+              onChange={(e) => setPromoAmount(e.target.value)}
+              className="admin-select"
+              style={{ width: 90 }}
+              placeholder="Кол-во ⭐"
+            />
+          )}
+          <input
+            type="number"
+            min={1}
+            value={promoMaxUses}
+            onChange={(e) => setPromoMaxUses(e.target.value)}
+            className="admin-select"
+            style={{ width: 110 }}
+            placeholder="Лимит (необяз.)"
+          />
+          <button className="admin-filter-btn active" onClick={handleCreatePromo} disabled={creatingPromo} type="button">
+            {creatingPromo ? 'Создаём…' : 'Создать'}
+          </button>
+          {promoCreateMsg && <span className="meta" style={{ width: '100%' }}>{promoCreateMsg}</span>}
+        </div>
+
+        {promos.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            {promos.map((p) => (
+              <div className="admin-row" key={p.code}>
+                <div className="col">
+                  <span className="name" style={{ fontFamily: 'var(--font-mono)' }}>{p.code}</span>
+                  <span className="meta">
+                    {PROMO_TYPE_LABEL[p.type] || p.type}
+                    {p.type === 'stars' ? ` · ${p.amount}⭐` : ''} · использован {p.usedCount}
+                    {p.maxUses ? ` / ${p.maxUses}` : ' раз (без лимита)'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 15, margin: '24px 0 10px' }}>
+          Заявки на выдачу
+        </h2>
 
         <div className="admin-filters">
           {['all', 'pending', 'processing', 'done'].map((f) => (
@@ -183,7 +303,7 @@ export default function Admin() {
             <div className="col">
               <span className="name">{r.itemName}</span>
               <span className="meta">
-                {r.source === 'case' ? 'Кейс' : 'Маркет'} · @{r.machagramUsername}
+                {SOURCE_LABEL[r.source] || r.source} · @{r.machagramUsername}
               </span>
               <span className="meta">{fmtDate(r.createdAt)}</span>
             </div>

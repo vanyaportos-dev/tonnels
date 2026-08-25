@@ -3,10 +3,12 @@ import { useEffect, useState, useCallback } from 'react';
 import { Icon } from '../components/Icons';
 import BottomNav from '../components/BottomNav';
 import ItemCard from '../components/ItemCard';
-import CaseModal from '../components/CaseModal';
 import MarketBuyModal from '../components/MarketBuyModal';
 import RequestList from '../components/RequestList';
-import { CASE_ITEMS, MARKET_ITEMS } from '../lib/items';
+import CasesPage from '../components/CasesPage';
+import WheelPage from '../components/WheelPage';
+import LoadingScreen from '../components/LoadingScreen';
+import { MARKET_ITEMS } from '../lib/items';
 import { genId } from '../lib/id';
 
 const UID_KEY = 'tonnel_uid';
@@ -14,12 +16,16 @@ const UID_KEY = 'tonnel_uid';
 export default function Home() {
   const [tab, setTab] = useState('cases');
   const [userId, setUserId] = useState(null);
-  const [caseOpen, setCaseOpen] = useState(false);
   const [buyItem, setBuyItem] = useState(null);
   const [requests, setRequests] = useState([]);
   const [requestsLoading, setRequestsLoading] = useState(true);
   const [balance, setBalance] = useState(0);
   const [avatarBroken, setAvatarBroken] = useState(false);
+  const [booting, setBooting] = useState(true);
+
+  const [promoCode, setPromoCode] = useState('');
+  const [promoBusy, setPromoBusy] = useState(false);
+  const [promoMsg, setPromoMsg] = useState('');
 
   useEffect(() => {
     let uid = window.localStorage.getItem(UID_KEY);
@@ -29,8 +35,6 @@ export default function Home() {
     }
     setUserId(uid);
 
-    // Регистрируем пользователя в общем реестре (нужно, чтобы админ мог
-    // начислить звёзды всем сразу) и подтягиваем текущий баланс.
     fetch('/api/user/touch', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -39,6 +43,9 @@ export default function Home() {
       .then((r) => r.json())
       .then((data) => setBalance(data.balance || 0))
       .catch(() => {});
+
+    const t = setTimeout(() => setBooting(false), 1500);
+    return () => clearTimeout(t);
   }, []);
 
   const loadRequests = useCallback(() => {
@@ -54,6 +61,33 @@ export default function Home() {
     if (userId) loadRequests();
   }, [userId, loadRequests]);
 
+  async function handleRedeemPromo() {
+    if (!promoCode.trim()) return;
+    setPromoBusy(true);
+    setPromoMsg('');
+    try {
+      const res = await fetch('/api/promo/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, code: promoCode }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPromoMsg(data.message || 'Не удалось применить промокод');
+        return;
+      }
+      setPromoMsg('Промокод применён!');
+      setPromoCode('');
+      if (data.result?.balance !== null && data.result?.balance !== undefined) {
+        setBalance(data.result.balance);
+      }
+    } catch {
+      setPromoMsg('Ошибка сети');
+    } finally {
+      setPromoBusy(false);
+    }
+  }
+
   if (!userId) return null;
 
   return (
@@ -63,17 +97,15 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </Head>
 
+      {booting && <LoadingScreen />}
+
       <div className="app-shell">
         <div className="app-scroll">
           <header className="topbar">
             <div className="brand">
               <span className="brand-mark">
                 {!avatarBroken ? (
-                  <img
-                    src="/image/favico.png"
-                    alt=""
-                    onError={() => setAvatarBroken(true)}
-                  />
+                  <img src="/image/favico.png" alt="" onError={() => setAvatarBroken(true)} />
                 ) : (
                   <Icon name="seal" width={15} height={15} />
                 )}
@@ -89,67 +121,23 @@ export default function Home() {
             </div>
           </header>
 
-          <div className="top-tabs">
-            <button
-              className={`top-tab${tab === 'cases' ? ' active' : ''}`}
-              onClick={() => setTab('cases')}
-              type="button"
-            >
-              Кейсы
-            </button>
-            <button
-              className={`top-tab${tab === 'market' ? ' active' : ''}`}
-              onClick={() => setTab('market')}
-              type="button"
-            >
-              Маркет
-            </button>
-            <button
-              className={`top-tab${tab === 'gifts' ? ' active' : ''}`}
-              onClick={() => setTab('gifts')}
-              type="button"
-            >
-              Мои подарки
-            </button>
-          </div>
-
-          <div className="toolbar">
-            <div className="search-field">
-              <Icon name="search" width={16} height={16} />
-              Быстрый поиск
+          {tab === 'market' && (
+            <div className="toolbar">
+              <div className="search-field">
+                <Icon name="search" width={16} height={16} />
+                Быстрый поиск
+              </div>
+              <button className="icon-btn" type="button">
+                <Icon name="filter" width={16} height={16} />
+              </button>
+              <button className="icon-btn" type="button">
+                <Icon name="sort" width={16} height={16} />
+              </button>
             </div>
-            <button className="icon-btn" type="button">
-              <Icon name="filter" width={16} height={16} />
-            </button>
-            <button className="icon-btn" type="button">
-              <Icon name="sort" width={16} height={16} />
-            </button>
-          </div>
+          )}
 
           {tab === 'cases' && (
-            <>
-              <button
-                className="case-banner"
-                onClick={() => setCaseOpen(true)}
-                type="button"
-              >
-                <div className="case-banner-content">
-                  <p className="case-banner-eyebrow">Каждые 24 часа · бесплатно</p>
-                  <h2 className="case-banner-title">Кейсы</h2>
-                  <p className="case-banner-sub">Откройте кейс и заберите NFT-подарок</p>
-                </div>
-                <span className="case-banner-seal">
-                  <Icon name="seal" width={26} height={26} />
-                </span>
-              </button>
-
-              <p className="section-label">Все подарки</p>
-              <div className="item-grid">
-                {CASE_ITEMS.map((item) => (
-                  <ItemCard key={item.id} item={item} mode="display" />
-                ))}
-              </div>
-            </>
+            <CasesPage userId={userId} onBalanceChange={setBalance} onRequestCreated={loadRequests} />
           )}
 
           {tab === 'market' && (
@@ -186,11 +174,7 @@ export default function Home() {
           )}
 
           {tab === 'event' && (
-            <div className="soon-wrap">
-              <Icon name="trophy" />
-              <h3>Ивент скоро стартует</h3>
-              <p>Первое сезонное событие уже готовится.</p>
-            </div>
+            <WheelPage userId={userId} onBalanceChange={setBalance} onRequestCreated={loadRequests} />
           )}
 
           {tab === 'profile' && (
@@ -211,6 +195,25 @@ export default function Home() {
                     </p>
                   </div>
                 </div>
+
+                <span className="field-label">Промокод</span>
+                <div className="field-input-row">
+                  <input
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value)}
+                    placeholder="Введите промокод"
+                  />
+                </div>
+                <button
+                  className="btn-ghost"
+                  style={{ marginBottom: 8 }}
+                  onClick={handleRedeemPromo}
+                  disabled={promoBusy}
+                  type="button"
+                >
+                  {promoBusy ? 'Применяем…' : 'Активировать'}
+                </button>
+                {promoMsg && <p className="field-hint">{promoMsg}</p>}
               </div>
               <p className="section-label">История заявок</p>
               <RequestList requests={requests} />
@@ -220,14 +223,6 @@ export default function Home() {
 
         <BottomNav active={tab} onChange={setTab} />
       </div>
-
-      {caseOpen && (
-        <CaseModal
-          userId={userId}
-          onClose={() => setCaseOpen(false)}
-          onRequestCreated={loadRequests}
-        />
-      )}
 
       {buyItem && (
         <MarketBuyModal
