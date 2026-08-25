@@ -18,6 +18,8 @@ export default function Home() {
   const [buyItem, setBuyItem] = useState(null);
   const [requests, setRequests] = useState([]);
   const [requestsLoading, setRequestsLoading] = useState(true);
+  const [balance, setBalance] = useState(0);
+  const [avatarBroken, setAvatarBroken] = useState(false);
 
   useEffect(() => {
     let uid = window.localStorage.getItem(UID_KEY);
@@ -26,6 +28,17 @@ export default function Home() {
       window.localStorage.setItem(UID_KEY, uid);
     }
     setUserId(uid);
+
+    // Регистрируем пользователя в общем реестре (нужно, чтобы админ мог
+    // начислить звёзды всем сразу) и подтягиваем текущий баланс.
+    fetch('/api/user/touch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: uid }),
+    })
+      .then((r) => r.json())
+      .then((data) => setBalance(data.balance || 0))
+      .catch(() => {});
   }, []);
 
   const loadRequests = useCallback(() => {
@@ -55,13 +68,24 @@ export default function Home() {
           <header className="topbar">
             <div className="brand">
               <span className="brand-mark">
-                <Icon name="seal" width={15} height={15} />
+                {!avatarBroken ? (
+                  <img
+                    src="/image/favico.png"
+                    alt=""
+                    onError={() => setAvatarBroken(true)}
+                  />
+                ) : (
+                  <Icon name="seal" width={15} height={15} />
+                )}
               </span>
               Tonnel
+              <span className="verified-badge">
+                <Icon name="verified" width={15} height={15} />
+              </span>
             </div>
             <div className="balance-pill">
               <Icon name="star" width={13} height={13} />
-              0
+              {balance}
             </div>
           </header>
 

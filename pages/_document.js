@@ -12,6 +12,8 @@ export default function Document() {
           rel="stylesheet"
         />
         <meta name="theme-color" content="#0A0A0C" />
+        <link rel="icon" href="/image/favico.png" />
+        <link rel="apple-touch-icon" href="/image/favico.png" />
       </Head>
       <body>
         <Main />

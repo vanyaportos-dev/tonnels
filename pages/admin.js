@@ -15,6 +15,9 @@ export default function Admin() {
   const [requests, setRequests] = useState([]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(false);
+  const [grantAmount, setGrantAmount] = useState(100);
+  const [granting, setGranting] = useState(false);
+  const [grantResult, setGrantResult] = useState('');
 
   useEffect(() => {
     const saved = window.localStorage.getItem(PASS_KEY);
@@ -49,6 +52,28 @@ export default function Admin() {
     if (authed && password) load(password);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed]);
+
+  async function handleGrant() {
+    setGranting(true);
+    setGrantResult('');
+    try {
+      const res = await fetch('/api/admin/grant-stars', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': password },
+        body: JSON.stringify({ amount: Number(grantAmount) }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setGrantResult(data.error === 'amount_out_of_range' ? 'Сумма должна быть 100–500' : 'Ошибка');
+        return;
+      }
+      setGrantResult(`Начислено ${data.amount}⭐ для ${data.count} пользователей`);
+    } catch {
+      setGrantResult('Ошибка сети');
+    } finally {
+      setGranting(false);
+    }
+  }
 
   async function updateStatus(id, status) {
     setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
@@ -105,6 +130,35 @@ export default function Admin() {
           >
             Обновить
           </button>
+        </div>
+
+        <div className="admin-row" style={{ flexWrap: 'wrap', gap: 10 }}>
+          <div className="col">
+            <span className="name">Начислить звёзды всем пользователям</span>
+            <span className="meta">Диапазон 100–500 ⭐ за раз, применяется ко всем зарегистрированным ID</span>
+          </div>
+          <div className="spacer" />
+          <input
+            type="number"
+            min={100}
+            max={500}
+            step={10}
+            value={grantAmount}
+            onChange={(e) => setGrantAmount(e.target.value)}
+            className="admin-select"
+            style={{ width: 90 }}
+          />
+          <button
+            className="admin-filter-btn active"
+            onClick={handleGrant}
+            disabled={granting}
+            type="button"
+          >
+            {granting ? 'Начисляем…' : 'Начислить'}
+          </button>
+          {grantResult && (
+            <span className="meta" style={{ width: '100%' }}>{grantResult}</span>
+          )}
         </div>
 
         <div className="admin-filters">
