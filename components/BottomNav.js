@@ -3,6 +3,7 @@ import { Icon } from './Icons';
 
 const TABS = [
   { id: 'games', label: 'Игры', icon: 'gamepad' },
+  { id: 'cases', label: 'Кейсы', icon: 'seal' },
   { id: 'market', label: 'Маркет', icon: 'shoppingBag' },
   { id: 'gifts', label: 'Подарки', icon: 'inbox' },
   { id: 'event', label: 'Ивент', icon: 'trophy', badge: 'NEW' },
@@ -23,7 +24,7 @@ export default function BottomNav({ active, onChange }) {
               type="button"
             >
               {tab.badge && <span className="badge-new">{tab.badge}</span>}
-              <Icon name={tab.icon} width={20} height={20} />
+              <Icon name={tab.icon} width={19} height={19} />
               <span>{tab.label}</span>
             </button>
           ))}
