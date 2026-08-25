@@ -1,11 +1,10 @@
-import { Icon, itemGradient } from './Icons';
+import { Icon } from './Icons';
+import ItemArt from './ItemArt';
 
 export default function ItemCard({ item, mode = 'display', onBuy }) {
   return (
     <div className="item-card">
-      <div className="item-art" style={{ background: itemGradient(item.id) }}>
-        <Icon name={item.icon} color="#f3f1ea" />
-      </div>
+      <ItemArt id={item.id} icon={item.icon} className="item-art" />
       <p className="item-name">{item.name}</p>
 
       {mode === 'market' ? (

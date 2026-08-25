@@ -143,6 +143,20 @@ export function Icon({ name, ...props }) {
           <path d="M9 15.5L8 21l4-2 4 2-1-5.5" {...common} />
         </Svg>
       );
+    case 'verified':
+      return (
+        <Svg {...props} fill="currentColor" stroke="none">
+          <path d="M12 2.3l2.1 1.5 2.5-.4 1 2.3 2.3 1-.4 2.5 1.5 2.1-1.5 2.1.4 2.5-2.3 1-1 2.3-2.5-.4L12 21.7l-2.1-1.5-2.5.4-1-2.3-2.3-1 .4-2.5L3 12l1.5-2.1-.4-2.5 2.3-1 1-2.3 2.5.4L12 2.3z" />
+          <path
+            d="M8.7 12.2l2.1 2.1 4.3-4.3"
+            fill="none"
+            stroke="#0a0a0d"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+      );
     case 'flame':
       return (
         <Svg {...props}>

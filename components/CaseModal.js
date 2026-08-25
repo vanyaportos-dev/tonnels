@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Icon, itemGradient } from './Icons';
+import { Icon } from './Icons';
+import ItemArt from './ItemArt';
 import { CASE_ITEMS, BEAR } from '../lib/items';
 import UsernameStep from './UsernameStep';
 import ConfirmStep from './ConfirmStep';
@@ -149,9 +150,7 @@ export default function CaseModal({ userId, onClose, onRequestCreated }) {
             <div className="drop-list">
               {CASE_ITEMS.map((it) => (
                 <div className="drop-row" key={it.id}>
-                  <div className="drop-row-art" style={{ background: itemGradient(it.id) }}>
-                    <Icon name={it.icon} color="#f3f1ea" />
-                  </div>
+                  <ItemArt id={it.id} icon={it.icon} className="drop-row-art" size="60%" />
                   <span className="drop-row-name">{it.name}</span>
                   {it.id === BEAR.id && <span className="drop-row-highlight">высокий шанс</span>}
                 </div>
@@ -164,9 +163,7 @@ export default function CaseModal({ userId, onClose, onRequestCreated }) {
           <div className="reveal-wrap">
             <p className="reveal-eyebrow">Поздравляем</p>
             <div className="reveal-burst">
-              <div className="reveal-art" style={{ background: itemGradient(prize.id) }}>
-                <Icon name={prize.icon} color="#f3f1ea" />
-              </div>
+              <ItemArt id={prize.id} icon={prize.icon} className="reveal-art" size="55%" />
             </div>
             <p className="reveal-name">{prize.name}</p>
             <button className="btn-gold" onClick={() => setStep('username')} type="button">

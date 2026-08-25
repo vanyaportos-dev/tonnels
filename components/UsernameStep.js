@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Icon, itemGradient } from './Icons';
+import ItemArt from './ItemArt';
 
 export default function UsernameStep({ item, price, onSubmit }) {
   const [value, setValue] = useState('');
@@ -26,9 +26,7 @@ export default function UsernameStep({ item, price, onSubmit }) {
   return (
     <form onSubmit={handleSubmit}>
       <div className="claim-summary">
-        <div className="claim-summary-art" style={{ background: itemGradient(item.id) }}>
-          <Icon name={item.icon} color="#f3f1ea" />
-        </div>
+        <ItemArt id={item.id} icon={item.icon} className="claim-summary-art" size="55%" />
         <div>
           <p className="claim-summary-title">{item.name}</p>
           <p className="claim-summary-sub">

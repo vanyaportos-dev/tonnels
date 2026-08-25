@@ -1,4 +1,5 @@
-import { Icon, itemGradient } from './Icons';
+import { Icon } from './Icons';
+import ItemArt from './ItemArt';
 
 const STATUS_LABEL = {
   pending: 'Ожидает',
@@ -33,9 +34,7 @@ export default function RequestList({ requests }) {
     <div className="request-list">
       {requests.map((r) => (
         <div className="request-card" key={r.id}>
-          <div className="request-art" style={{ background: itemGradient(r.itemId) }}>
-            <Icon name={itemIcon(r.itemId)} color="#f3f1ea" />
-          </div>
+          <ItemArt id={r.itemId} icon={itemIcon(r.itemId)} className="request-art" size="55%" />
           <div className="request-body">
             <p className="request-title">{r.itemName}</p>
             <p className="request-sub">
